@@ -7,6 +7,7 @@
 ;; Version: 1.1.3
 ;; Created: 2008-05-13
 ;; Keywords: convenience
+;; Package-Requires: ((cl-lib "0.5"))
 ;; EmacsWiki: IdleHighlight
 
 ;; This file is NOT part of GNU Emacs.
@@ -53,7 +54,7 @@
 ;;; Code:
 
 (require 'thingatpt)
-
+(require 'cl-lib)
 
 (defgroup idle-highlight nil
  "Highlight other occurrences of the word at point."
@@ -68,6 +69,11 @@
   "List of words to be excepted from highlighting."
   :group 'idle-highlight
   :type '(repeat string))
+
+(defcustom idle-highlight-exception-faces '(font-lock-keyword-face)
+  "List of exception faces."
+  :group 'idle-highlight
+  :type '(repeat symbol))
 
 (defcustom idle-highlight-idle-time 0.5
   "Time after which to highlight the word at point."
@@ -89,7 +95,8 @@
         (when (and target-symbol
                    (not (in-string-p))
                    (looking-at-p "\\s_\\|\\sw") ;; Symbol characters
-                   (not (member target idle-highlight-exceptions)))
+                   (not (member target idle-highlight-exceptions))
+                   (idle-highlight-at-exception-face (point)))
           (setq idle-highlight-regexp (concat "\\<" (regexp-quote target) "\\>"))
           (highlight-regexp idle-highlight-regexp 'idle-highlight)))))
 
@@ -97,6 +104,15 @@
   (when idle-highlight-regexp
     (unhighlight-regexp idle-highlight-regexp)
     (setq idle-highlight-regexp nil)))
+
+(defun idle-highlight-at-exception-face (point)
+  "Return t if text has exception face at POINT."
+  (let ((face (get-text-property (point) 'face)))
+    (if (symbolp face)
+        (null (memq face idle-highlight-exception-faces))
+      (cl-loop for f in face
+               until (memq f idle-highlight-exception-faces) return nil
+               finally return t))))
 
 ;;;###autoload
 (define-minor-mode idle-highlight-mode
